@@ -34,7 +34,7 @@ of the display surface in pixels. Currently, MediaTrackSettings exposes the
 resolution of the frames flowing through the MediaStreamTrack via the width and
 height properties. Often, the physical resolution is the same as the already
 reported resolution (width/height properties). However, an application can
-alter this by rescaling the video using constraints. The UA can also apply
+alter this by rescaling the video using constraints. The UA may also apply
 rescaling of its own, so the width and height properties do not always reflect
 the physical resolution of the captured surface.
 
@@ -123,11 +123,14 @@ MediaTrackSettings.
 Expose a single property called pixelRatio, which contains the scaling applied
 to the capture. Dividing the width/height properties by the pixel retio would
 return the logical resolution. The application could use the maximum width and
-height returned by getCapabilities() as the physical resolution. The downside of
-this approach is that UAs can return tracks with resolution higher than the
-physical resolution by applying additional scaling apart from the OS and regular
-browser zoom. Therefore the min/max capabilities are not always guaranteed to
-return the physical resolutions.
+height returned by getCapabilities() as the physical resolution. A downside of
+this approach is track capabilities have, until recently, been restricted to
+constant values by the spec, so it might be surprising for developers that newer
+implementations have variable width and height capabilities that dynamically
+reflect a surface's width and height. It can also potentially cause difficulties
+in case a UA wants to perform additional scaling apart from the OS and regular
+browser zoom. Other than these potential issues, this alternative is similar
+the proposed solution.
 
 ### [Alternative 3]
 
