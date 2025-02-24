@@ -1,4 +1,4 @@
-# Extra Timestamps for encoded RTC media frames
+# Physical and logical resolution for captured display surfaces
 
 ## Authors:
 
@@ -15,49 +15,60 @@ The [Screen Capture](https://w3c.github.io/mediacapture-screen-share/)
 API allows users to share their screen, typically in videoconferencing
 scenarios that involve [WebRTC](https://w3c.github.io/webrtc-pc/) to send
 the screen capture together with other audio and video to remote users.
-The screen capture may consist of the full screen, but also an application
-window or a browser tab. The captured content (screen, window or tab) is
+The screen capture may consist of a browser tab, an application window or the
+full screen. The captured content (tab, window or screen) is
 often referred to as a captured surface.
 
-The video from a screen capture is returned as a MediaStreamTrack, which
+The video from a screen capture is returned as a [MediaStreamTrack](), which
 provides an API surface to control the media flow and to retrieve properties
 about the captured surface. These properties are reported as a MediaTrackSettings
 object, returned by the getSettings method.
 
-This feature consists in adding a number of additional properties to the
+The proposed feature consists of a number of additional properties to the
 MediaTrackSettings object returned by getSettings() containing the physical
 and logical resolutions of the video. An event is also fired when these
 resolutions change during the capture session.
 
-Currently, MediaTrackSettings contains the actual resolution of the frames
-flowing through the MediaStreamTrack via the width and height properties.
-The physical resolution of a captured surface is the actual size of the surface
-in pixels. Very often, the physical resolution is the same as the already
+What we mean by physical resolution of a captured surface is the actual size
+of the display surface in pixels. Currently, MediaTrackSettings exposes the
+resolution of the frames flowing through the MediaStreamTrack via the width and
+height properties. Often, the physical resolution is the same as the already
 reported resolution (width/height properties). However, an application can
-alter this by rescaling the video using constraints.
+alter this by rescaling the video using constraints. The UA can also apply
+rescaling of its own, so the width and height properties do not always reflect
+the physical resolution of the captured surface.
 
 In some cases, a surface's resolution is altered by zooming provided by the
 operating system and/or the Web browser (in the case of tabs). The result can
-be that a surface with a relatively small size can have a high resolution due
-to the effect of zooming. In this case, a videoconferencing application can 
-optimize bandwidth consumption by sending the video over the network using
-a lower resolution. Knowing the physical and logical resolution of the captured
-surface helps the application make this determination and apply this
+be that a surface with a relatively small original size can have a high
+resolution due to the effect of zooming. We refer to the resolution prior to
+applying the effects of zoom as the logical resolution. In case where a surface
+is heavily zoomed in, a videoconferencing application can  optimize resource
+consumption by sending the video over the network using a the logical
+resolution, which is lower and requires less bandwidth to transmit and less
+CPU to encode and decode. Knowing the physical and logical resolution of the
+captured surface helps the application make this determination and apply this
 optimization.
+
+The Web platform has the concept of a device pixel ratio, which is the
+ratio between CSS pixels (logical) and actual pixels (physical). The logical
+width and height of a surface results from dividing the physical width or height
+by the captured surface's device pixel ratio.
 
 ## User-Facing Problem
 
-The basic problem to solve is optimizing the bandwidth used to transmit the
+The basic problem to solve is optimizing the resources used to transmit the
 video from a screen-capture session over a WebRTC peer connection in cases
-when the captured surface may be heavily zoomed in. In this cases, the
+when the captured surface may be heavily zoomed in. In these cases, the
 resolution of the surface is high (which would be costly), but the actual
 content can be faithfully transmitted at a lower resolution, which requires
 fewer resources.
 
 ### Goals
 
-- Provide Web applications using Screen Capture access to the physical and
-  logical resolution of a captured surface.
+- Provide Web applications using the
+  [Screen Capture](https://w3c.github.io/mediacapture-screen-share/) API access
+  to the physical and logical resolution of a captured surface.
 
 ### Non-goals
 
@@ -67,13 +78,10 @@ information provided by this feature.
 
 ### Example
 
-This shows an example of an application that:
-1. Computes the delay between audio and video
-2. Computes the processing and logs and/or updates remote parameters based on the
-delay.
+This shows an example of an application that adjust the track width/height to
+the logical resolution when scaling exceeds an applciation-defined constant.
 
 ```js
-
 
 const stream = await navigator.mediaDevices.getDisplayMedia({video: true});
 const track = stream.getVideoTracks()[0];
@@ -92,10 +100,11 @@ track.onconfigurationchange = () => {
 }
 
 function maybeAdjustResolution(track) {
-  if (physicalSize / logicalSize > Constant) { // Constant is app-defined
+  if (physicalSize / logicalSize > CONSTANT) { // Constant is app-defined
     await track.applyConstraints({width: settings.logicalWidth, height: settings.logicalHeight});
   }
 }
+```
 
 ## Alternatives considered
 
@@ -109,8 +118,18 @@ of a MediaStreamTrack via MediaTrackSettings is a well established pattern.
 Moreover, the related width and height properties are also exposed as
 MediaTrackSettings.
 
-
 ### [Alternative 2]
+
+Expose a single property called pixelRatio, which contains the scaling applied
+to the capture. Dividing the width/height properties by the pixel retio would
+return the logical resolution. The application could use the maximum width and
+height returned by getCapabilities() as the physical resolution. The downside of
+this approach is that UAs can return tracks with resolution higher than the
+physical resolution by applying additional scaling apart from the OS and regular
+browser zoom. Therefore the min/max capabilities are not always guaranteed to
+return the physical resolutions.
+
+### [Alternative 3]
 
 Rely on existing APIs that provide a device pixel ratio, such as 
 [window.devicePixelRatio](https://drafts.csswg.org/cssom-view-1/#dom-window-devicepixelratio)
@@ -126,12 +145,12 @@ would be useful for a number of single-screen cases, but in a multiple-screen
 environment it would not be possible to know which screen corresponds to the
 captured surface in a multiple-screen environment.
 
-### [Alternative 3]
+### [Alternative 4]
 Do image processing to determine the level of zoom in of the captured surface.
 Since the application has access to all the pixels of the captured surface, it
 should be possible to apply image-processing techniques on each frame to
 determine if it is suitable to be downscaled without losing quality for network
-transmission. 
+transmission.
 
 The problem with this approach is that it is costly in terms of resources and
 less accurate than accessing the exact ratio.
@@ -146,9 +165,9 @@ the user has explicitly authorized the capture of the surface, which provides
 access to all the pixels and thus the possibility of determining this value
 via image processing.
 We consider that this amount of extra information is the minimum required to
-support the intended uses case and the risk is sufficiently mitigated by
+support the intended use cases and the risk is sufficiently mitigated by
 tying the exposure to the display-capture permission, which requires an explicit
-dialog, is not persitent, is limited to the captured surface, and expires
+dialog, is not persistent, is limited to the captured surface, and expires
 when the capture session ends.
 
 ## References & acknowledgements
