@@ -3,15 +3,18 @@
 ### 2.1. What information does this feature expose, and for what purposes?
 
 This feature exposes the logical and physical resolution of a display surface
-captured with getDisplayMedia. The physical resolution is already possible to
-know using existing APIs and is the size of the display surface in pixels,
-but the logical resolution is currently not possible to know existing APIs.
+captured with [getDisplayMedia](https://w3c.github.io/mediacapture-screen-share/).
+The physical resolution is already possible to know using existing APIs and is
+the size of the display surface in pixels, but the logical resolution is currently
+not possible to know existing APIs.
 The logical resolution results from dividing the physical resolution by a ratio
 that represents the scaling applied by the underlying operating system and
 possibly the UA via page zoom. This ratio is available for a page running
 JavaScript via the[window.devicePixelRatio](https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio)
 API, but this is not necessarily the same as the ratio of the display surface
-being captured. This API makes it possible to know the pixel ratio of a captured
+being captured.
+
+This API makes it possible to know the pixel ratio of a captured
 surface. This information will be gated by the display-capture permission,
 which grants access to all the pixels in the captured surface, requires explicit
 user authorization via a dialog, is not persistent, and expires once the capture
