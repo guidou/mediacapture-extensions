@@ -114,8 +114,11 @@ MediaTrackSettings.
 
 Expose two properties called logicalWidth and logicalHeight, and maybe even
 two additional properties called physicalWidth and physicalHeight.
-Recently, track capabilities have been updated to not be constant and the
-maximum widht and height capabilities are defined to be the size of the display
+Recently, track capabilities have been updated to 
+[not be constant](https://github.com/w3c/mediacapture-main/pull/1032) and the
+maximum [width](https://w3c.github.io/mediacapture-screen-share/#dfn-width)
+and [height](https://w3c.github.io/mediacapture-screen-share/#dfn-height)
+capabilities are defined to be the size of the display
 surface, which corresponds to the physical resolution. Therefore, properties
 for physical width and height are not needed since they are already specified.
 Having two properties that are the result of dividing two existing capabilities
