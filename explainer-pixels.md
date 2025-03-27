@@ -24,26 +24,24 @@ provides an API surface to control the media flow and to retrieve properties
 about the captured surface. These properties are reported as a MediaTrackSettings
 object, returned by the getSettings method.
 
-The proposed feature consists of a number of additional properties to the
-MediaTrackSettings object returned by getSettings() containing the physical
-and logical resolutions of the video. An event is also fired when these
-resolutions change during the capture session.
+The proposed feature consists of a new property to the
+MediaTrackSettings object returned by getSettings() containing the pixel ratio
+of captured screen. An event is also fired when this value changes during the
+capture session.
 
 What we mean by physical resolution of a captured surface is the actual size
 of the display surface in pixels. Currently, MediaTrackSettings exposes the
 resolution of the frames flowing through the MediaStreamTrack via the width and
 height properties. Often, the physical resolution is the same as the already
 reported resolution (width/height properties). However, an application can
-alter this by rescaling the video using constraints. The UA may also apply
-rescaling of its own, so the width and height properties do not always reflect
-the physical resolution of the captured surface.
+alter this by rescaling the video using constraints.
 
 In some cases, a surface's resolution is altered by zooming provided by the
-operating system and/or the Web browser (in the case of tabs). The result can
-be that a surface with a relatively small original size can have a high
-resolution due to the effect of zooming. We refer to the resolution prior to
-applying the effects of zoom as the logical resolution. In case where a surface
-is heavily zoomed in, a videoconferencing application can  optimize resource
+operating system. The result can be that a surface with a relatively small
+original size can have a high resolution due to the effect of zooming. 
+We refer to the resolution prior to applying the effects of zoom as the logical
+resolution. In case where a surface is heavily zoomed in, a videoconferencing
+application can  optimize resource
 consumption by sending the video over the network using a the logical
 resolution, which is lower and requires less bandwidth to transmit and less
 CPU to encode and decode. Knowing the physical and logical resolution of the
@@ -86,22 +84,16 @@ the logical resolution when scaling exceeds an applciation-defined constant.
 const stream = await navigator.mediaDevices.getDisplayMedia({video: true});
 const track = stream.getVideoTracks()[0];
 const settings = track.getSettings();
-let physicalSize = settings.physicalWidth * settings.physicalHeight;
-let logicalSize = settings.logicalWidth * settings.logicalHeight;
+const capabilities = track.getCapabilities();
 maybeAdjustResolution(track);
 
 track.onconfigurationchange = () => {
-  const oldPhysicalSize = physicalSize;
-  const oldLogicalSize = logicalSizel
-  const settings = track.getSettings();
-  physicalSize = settings.physicalWidth * settings.physicalHeight;
-  logicalSize = settings.logicalWidth * settings.logicalHeight;
-  maybeAdjustResolution(track)
-}
-
-function maybeAdjustResolution(track) {
-  if (physicalSize / logicalSize > CONSTANT) { // Constant is app-defined
-    await track.applyConstraints({width: settings.logicalWidth, height: settings.logicalHeight});
+  if (track.screenPixelRatio > CONSTANT) { // Constant is app-defined
+    let physicalWidth = capabilities.width.max;
+    let physicalHeight = capabilities.height.max;
+    let logicalWidth = physicalWidth / settings.screenPixelRatio;
+    let logicalHeight = physicalHeight / settings.screenPixelRatio;
+    await track.applyConstraints({width: logicalWidth, height: logicalHeight});
   }
 }
 ```
@@ -120,17 +112,15 @@ MediaTrackSettings.
 
 ### [Alternative 2]
 
-Expose a single property called pixelRatio, which contains the scaling applied
-to the capture. Dividing the width/height properties by the pixel retio would
-return the logical resolution. The application could use the maximum width and
-height returned by getCapabilities() as the physical resolution. A downside of
-this approach is track capabilities have, until recently, been restricted to
-constant values by the spec, so it might be surprising for developers that newer
-implementations have variable width and height capabilities that dynamically
-reflect a surface's width and height. It can also potentially cause difficulties
-in case a UA wants to perform additional scaling apart from the OS and regular
-browser zoom. Other than these potential issues, this alternative is similar
-the proposed solution.
+Expose two properties called logicalWidth and logicalHeight, and maybe even
+two additional properties called physicalWidth and physicalHeight.
+Recently, track capabilities have been updated to not be constant and the
+maximum widht and height capabilities are defined to be the size of the display
+surface, which corresponds to the physical resolution. Therefore, properties
+for physical width and height are not needed since they are already specified.
+Having two properties that are the result of dividing two existing capabilities
+by the same value looks redundant, so exposing the ratio as a single property
+looks like a better choice.
 
 ### [Alternative 3]
 
